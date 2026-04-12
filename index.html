@@ -2075,14 +2075,13 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && window.FIREBASE_CO
 // FIREBASE CONFIG — SUBSTITUA PELOS SEUS VALORES (mesma config do site do cliente)
 // ═══════════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: "AIzaSyCD9Ow0w2e9-7t9KEIlD9sb6kZYFbNvQ84",
-  authDomain: RESTAURANTE.firebase.authDomain,
-  databaseURL: RESTAURANTE.firebase.databaseURL,
-  projectId: RESTAURANTE.firebase.projectId,
-  storageBucket: RESTAURANTE.firebase.storageBucket,
-  messagingSenderId: "81017075579",
-  appId: "1:81017075579:web:34836122cf33945d1f2fde",
-  measurementId: "G-691B9NSYE7"
+  apiKey: "AIzaSyCKo1aayk0vW816-uCl1PLcFxsGUztAe_s",
+  authDomain: "angelical-72f74.firebaseapp.com",
+  databaseURL: "https://angelical-72f74-default-rtdb.firebaseio.com",
+  projectId: "angelical-72f74",
+  storageBucket: "angelical-72f74.firebasestorage.app",
+  messagingSenderId: "196225538242",
+  appId: "1:196225538242:web:f4753703395a9709c0835b"
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
@@ -2140,7 +2139,8 @@ let finConfig={
 let finSubView='dre';
 let despesaEditId=null, contaEditId=null;
 let vendas=[], pgtoAtual='pix', tipoAtual='retirada', catFilter='todos';
-let unidade=RESTAURANTE.cidade, caixaAberto=false;
+let unidade='Vicentinópolis', caixaAberto=false;
+let usuarioLogado=null;
 let caixaSessao=null; // {abertoEm, funcionaria, valorInicial, diaKey}
 let clientes=[]; clienteAtual=null, clienteDetalheId=null;
 let comandaFecharId=null, pgtoFecharComanda='pix';
@@ -2187,8 +2187,8 @@ let pedidosOnlineVistos=new Set();
 // ── Identidade única do dispositivo (pra gerar uids) ────────────
 const DEVICE_ID=(function(){
   try{
-    let d=localStorage.getItem('eb_device_id');
-    if(!d){ d='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); localStorage.setItem('eb_device_id',d); }
+    let d=localStorage.getItem('la_device_id');
+    if(!d){ d='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); localStorage.setItem('la_device_id',d); }
     return d;
   }catch(e){ return 'd'+Math.random().toString(36).slice(2,10); }
 })();
@@ -5797,10 +5797,8 @@ function updateClock(){
 }
 // ── LOGIN / USUÁRIOS ─────────────────────────────────────────────
 const USUARIOS_EB=[
-  {user:'jose',nome:'JOSÉ',pin:'1545',admin:true},
-  {user:'marjore',nome:'MARJORE',pin:'1112',admin:false}
+  {user:'marcos',nome:'MARCOS',pin:'5435',admin:true}
 ];
-let usuarioLogado=null;
 let loginSelecionado=null;
 let loginPinAtual='';
 function renderLoginUsers(){
