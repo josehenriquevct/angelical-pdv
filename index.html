@@ -4126,7 +4126,7 @@ function imprimirFechamento(){
 }
 // ── CARDÁPIO DIGITAL ─────────────────────────────────────────────
 function renderCardapio(){
-  const cats={burgers:'Burger',bebidas:'Bebida',porcoes:'Porção'};
+  const cats={burgers:'Burger',bebidas:'Bebida',porcoes:'Porção',monte:'Monte o Seu'};
   document.getElementById('card-list').innerHTML=cardapio.map(i=>{
     const ads=(i.adicionais&&i.adicionais.length)?`<div class="card-adic-badge">+ ${i.adicionais.length} adicional${i.adicionais.length>1?'is':''}</div>`:'';
     return `
