@@ -2626,8 +2626,8 @@ function setTroco(v){ trocoPara=parseFloat(v)||0; renderPedido(); }
 function renderCatTabs(){
   const tabs=document.getElementById('mini-cat-tabs');
   if(!tabs)return;
-  const cats=['todos','burgers','bebidas','porcoes','sobremesas','combos'];
-  const lbl={todos:'Todos',burgers:'Burgers',bebidas:'Bebidas',porcoes:'Porções',sobremesas:'Sobremesas',combos:'Combos'};
+  const cats=['todos','burgers','bebidas','porcoes','sobremesas','combos','monte'];
+  const lbl={todos:'Todos',burgers:'Burgers',bebidas:'Bebidas',porcoes:'Porções',sobremesas:'Sobremesas',combos:'Combos',monte:'Monte o Seu'};
   const count=c=>c==='todos'?cardapio.filter(i=>i.ativo).length:cardapio.filter(i=>i.cat===c&&i.ativo).length;
   const presentes=cats.filter(c=>c==='todos'||count(c)>0);
   tabs.innerHTML=presentes.map(c=>`<div class="mini-cat-tab ${catFilter===c?'active':''}" onclick="filterCatMini('${c}',this)">${lbl[c]||c}<span class="mini-cat-count">${count(c)}</span></div>`).join('');
@@ -3321,8 +3321,8 @@ function abrirFaltou(){
 function renderFaltaGrid(){
   const g=document.getElementById('falta-grid');
   if(!g)return;
-  const cats={burgers:'🍔 Hambúrgueres',porcoes:'🍟 Porções',bebidas:'🥤 Bebidas'};
-  const ordem=['burgers','porcoes','bebidas'];
+  const cats={burgers:'🍔 Hambúrgueres',porcoes:'🍟 Porções',bebidas:'🥤 Bebidas',monte:'🍔 Monte o Seu'};
+  const ordem=['burgers','porcoes','bebidas','monte'];
   let h='';
   ordem.forEach(cat=>{
     const lista=cardapio.filter(i=>i.cat===cat);
