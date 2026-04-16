@@ -985,14 +985,14 @@ window.FIREBASE_NAMESPACE = "pdv/unidade-1";
 if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && window.FIREBASE_CONFIG.databaseURL){
   try{
     const {initializeApp} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-    const {getDatabase, ref, set, onValue, update, serverTimestamp, goOnline, goOffline}
+    const {getDatabase, ref, set, onValue, update, push, serverTimestamp, goOnline, goOffline}
       = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
     const app = initializeApp(window.FIREBASE_CONFIG);
     const db = getDatabase(app);
     const root = window.FIREBASE_NAMESPACE || RESTAURANTE.firebaseNamespace+"/default";
     // Expõe API para o script principal
     window.FB = {
-      db, ref, set, onValue, update, serverTimestamp, root,
+      db, ref, set, onValue, update, push, serverTimestamp, root,
       ready: true,
       lastPushedAt: 0,
       ignoreNextRemote: false
@@ -3186,9 +3186,9 @@ function abrirHistoricoDia(){
   openModal('modal-hist-dia');
 }
 function reimprimirVenda(id){
-  const v=vendas.find(x=>x.id===id);
-  if(!v)return;
-  imprimirDupla(v);
+  const v=vendas.find(x=>String(x.id)===String(id));
+  if(!v){showToast('Pedido #'+id+' não encontrado ('+vendas.length+' vendas carregadas)');return;}
+  enviarParaImpressora(v);
   showToast('Reimprimindo #'+String(id).padStart(3,'0'));
 }
 function abrirDividirConta(id){
@@ -3783,33 +3783,78 @@ function gerarComanda(venda,via){
   return h;
 }
 function imprimirDupla(venda){
-  // Imprime via da cozinha e via do cliente como jobs de impressão separados,
-  // para que a impressora térmica corte automaticamente entre eles.
-  const pa=document.getElementById('print-area');
-  function imprimirVia(htmlVia,cb){
-    pa.innerHTML=htmlVia;
-    pa.style.display='block';
-    setTimeout(()=>{
-      window.print();
-      setTimeout(()=>{
-        pa.style.display='none';
-        pa.innerHTML='';
-        if(cb)cb();
-      },500);
-    },150);
-  }
-  const htmlCoz=gerarComanda(venda,'cozinha');
-  if(venda.tipo==='mesa'){
-    imprimirVia(htmlCoz);
+  // Envia o pedido para pedidos_abertos/ no Firebase
+  // O script Node.js (imprimir.js) detecta e imprime na térmica automaticamente
+  enviarParaImpressora(venda);
+}
+function enviarParaImpressora(venda){
+  if(!window.FB || !window.FB.ready){
+    console.warn('Firebase não conectado - não foi possível enviar para impressora');
+    showToast('Sem conexão Firebase - impressão não enviada');
     return;
   }
-  imprimirVia(htmlCoz,()=>{
-    // pequeno delay para garantir que o driver trate como job separado
-    setTimeout(()=>{
-      const htmlCli=gerarComanda(venda,'cliente');
-      imprimirVia(htmlCli);
-    },800);
-  });
+  try{
+    const fb=window.FB;
+    // Buscar dados do cliente
+    let clienteObj={nome:'N/I',telefone:''};
+    if(venda.clienteId){
+      const c=clientes.find(x=>x.id===venda.clienteId);
+      if(c){
+        clienteObj={
+          nome:c.nome||'N/I',
+          telefone:c.telefone||c.celular||'',
+          endereco:c.endereco||'',
+          bairro:c.bairro||'',
+          referencia:c.referencia||''
+        };
+      }
+    }
+    // Converter itens para formato do script (com adicionais)
+    const itensConv=(venda.itens||[]).map(i=>{
+      const adicTot=(i.adicionais||[]).reduce((s,a)=>s+a.preco*(a.qtd||1),0);
+      const unit=i.preco+adicTot;
+      return {
+        qtd:i.qtd||1,
+        nome:i.nome||'Item',
+        preco:i.preco||0,
+        subtotal:unit*(i.qtd||1),
+        obs:i.obs||'',
+        adicionais:(i.adicionais||[]).map(a=>({nome:a.nome,preco:a.preco,qtd:a.qtd||1}))
+      };
+    });
+    // Converter tipo
+    let tipo='retirada';
+    if(venda.tipo==='delivery'||venda.tipo==='entrega') tipo='delivery';
+    else if(venda.tipo==='mesa') tipo='mesa';
+    else if(venda.tipo==='salao') tipo='salao';
+    // Pagamento legível
+    const pgL={pix:'Pix',debito:'Cartão Débito',credito:'Cartão Crédito',dinheiro:'Dinheiro',fiado:'FIADO'};
+    // Montar objeto do pedido
+    const pedidoFB={
+      origem:'pdv',
+      criadoEm:Date.now(),
+      codigoConfirmacao:String(venda.id).padStart(3,'0'),
+      tipo:tipo,
+      cliente:clienteObj,
+      itens:itensConv,
+      subtotal:venda.subtotal||0,
+      desconto:venda.desconto||0,
+      taxa:venda.taxaEntrega||0,
+      total:venda.total||0,
+      pagamento:pgL[venda.pgto]||venda.pgto||'Pix',
+      troco:venda.trocoPara||null,
+      mesa:venda.mesa||null,
+      obsGeral:venda.obsGeral||'',
+      impresso:false
+    };
+    // Push para pedidos_abertos/ na raiz do Firebase
+    const novoRef=fb.push(fb.ref(fb.db,'pedidos_abertos'));
+    fb.set(novoRef,pedidoFB);
+    console.log('Pedido #'+pedidoFB.codigoConfirmacao+' enviado para impressora');
+  }catch(e){
+    console.error('Erro ao enviar para impressora:',e);
+    showToast('Erro ao enviar para impressora');
+  }
 }
 function finalizarPedido(){
   if(!caixaAberto && !(usuarioLogado && usuarioLogado.admin)){mostrarAbrirCaixa();return;}
@@ -3863,10 +3908,7 @@ function finalizarPedido(){
         hora:new Date()
       };
       descontarEstoqueCardapio(addItens);
-      const pa3=document.getElementById('print-area');
-      pa3.innerHTML='<div class="cp-big-notice">*** ADIÇÃO À MESA ***</div>'+gerarComanda(vendaAdic,'cozinha');
-      pa3.style.display='block';
-      setTimeout(()=>{window.print();setTimeout(()=>{pa3.style.display='none';},600);},150);
+      enviarParaImpressora(vendaAdic);
       // Reset e fecha
       closePdvModal();
       pedidoAtual=[];clienteAtual=null;tipoAtual='retirada';pgtoAtual='pix';
@@ -3912,10 +3954,7 @@ function finalizarPedido(){
       obsGeral:obsGeralAtual,
       hora:new Date()
     };
-    const pa=document.getElementById('print-area');
-    pa.innerHTML='<div class="cp-big-notice">*** ADIÇÃO AO PEDIDO ***</div>'+gerarComanda(vendaAdic,'cozinha');
-    pa.style.display='block';
-    setTimeout(()=>{window.print();setTimeout(()=>{pa.style.display='none';},600);},150);
+    enviarParaImpressora(vendaAdic);
     // reset e fecha
     modoAdicionar=false;editingVendaId=null;
     closePdvModal();
@@ -5885,16 +5924,8 @@ function aceitarPedidoOnline(){
   pedidoCount++;
   descontarEstoqueCardapio(venda.itens);
 
-  // gera comanda
-  const html=gerarComandaOnline(venda,p);
-  const pa=document.getElementById('print-area');
-  pa.innerHTML=html;
-  pa.style.display='block';
-  // abre impressão automaticamente
-  setTimeout(()=>{
-    window.print();
-    setTimeout(()=>{document.getElementById('print-area').style.display='none';},600);
-  },100);
+  // Pedido online já foi impresso automaticamente pelo script Node.js
+  // quando chegou no Firebase. Não precisa imprimir de novo aqui.
 
   // remove do Firebase (move para arquivo)
   if(window.fbReady){
@@ -6080,10 +6111,16 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Backspace'){loginBack();e.preventDefault();}
   else if(e.key==='Escape'){loginClear();e.preventDefault();}
 });
-// ── SEGURANÇA: SEMPRE exige login ao abrir/recarregar ──
-// NÃO restaura sessão do localStorage — obriga PIN toda vez
-usuarioLogado=null;
-try{localStorage.removeItem('eb_usuario_logado');}catch(e){}
+// ── SESSÃO: restaura login salvo, senão pede PIN ──
+try{
+  const saved=localStorage.getItem('eb_usuario_logado');
+  if(saved){
+    const u=JSON.parse(saved);
+    const found=USUARIOS_EB.find(x=>x.user===u.user);
+    if(found){ usuarioLogado=found; }
+    else{ usuarioLogado=null; }
+  }
+}catch(e){ usuarioLogado=null; }
 window.loginKey=loginKey;window.loginBack=loginBack;window.loginClear=loginClear;window.logoutUser=logoutUser;window.mostrarLogin=mostrarLogin;
 
 loadData();
