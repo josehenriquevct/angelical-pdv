@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDS · Esquina Burger</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0f172a;--card:#1e293b;--card2:#334155;--og:#D85A30;--og2:#FF7A45;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--green:#22c55e;--yellow:#eab308;--red:#ef4444;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+/* ── HEADER ─────────────────── */
+.kds-header{
+  display:flex;align-items:center;justify-content:space-between;padding:14px 24px;
+  background:var(--card);border-bottom:2px solid var(--og);
+}
+.kds-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--og);}
+.kds-logo span{color:var(--text);font-weight:600;font-size:14px;margin-left:8px;}
+.kds-clock{font-size:14px;color:var(--text2);font-variant-numeric:tabular-nums;}
+.kds-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+.kds-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ── LAYOUT ─────────────────── */
+.kds-body{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:calc(100vh - 56px);}
+.kds-main{padding:20px;overflow-y:auto;}
+.kds-sidebar{background:var(--card);border-left:1px solid var(--card2);padding:20px;display:flex;flex-direction:column;gap:16px;}
+
+/* ── RESUMO AGREGADO ────────── */
+.agg-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--og);margin-bottom:12px;}
+.agg-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.agg-pill{
+  display:inline-flex;align-items:center;gap:6px;background:var(--card);
+  border:1px solid var(--card2);border-radius:10px;padding:6px 14px;font-size:13px;
+}
+.agg-pill .aq{
+  background:var(--og);color:#fff;font-weight:700;border-radius:6px;
+  min-width:28px;text-align:center;padding:2px 6px;font-size:13px;
+}
+.agg-pill .an{color:var(--text);}
+
+/* ── CARDS DE PEDIDOS ───────── */
+.orders-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.orders-title .ot-count{background:var(--og);color:#fff;border-radius:8px;padding:2px 10px;font-size:12px;}
+.orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.order-card{
+  background:var(--card);border:1px solid var(--card2);border-radius:12px;padding:16px;
+  transition:border-color .2s;position:relative;overflow:hidden;
+}
+.order-card.urgente{border-color:var(--red);animation:urgentePulse 1.5s infinite;}
+.order-card.atencao{border-color:var(--yellow);}
+@keyframes urgentePulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3);}50%{box-shadow:0 0 0 8px rgba(239,68,68,0);}}
+.oc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.oc-num{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--og);}
+.oc-timer{font-size:12px;font-weight:600;padding:3px 10px;border-radius:6px;}
+.oc-timer.verde{background:#166534;color:#86efac;}
+.oc-timer.amarelo{background:#854d0e;color:#fde047;}
+.oc-timer.laranja{background:#9a3412;color:#fdba74;}
+.oc-timer.vermelho{background:#991b1b;color:#fca5a5;}
+.oc-tipo{font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:4px;color:#fff;}
+.oc-tipo.delivery{background:#2563eb;}
+.oc-tipo.retirada{background:#7c3aed;}
+.oc-tipo.mesa{background:#0d9488;}
+.oc-itens{list-style:none;margin:8px 0;padding:0;}
+.oc-itens li{font-size:13px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;}
+.oc-itens li:last-child{border-bottom:none;}
+.oc-itens .oi-qtd{color:var(--og);font-weight:700;margin-right:6px;}
+.oc-itens .oi-adds{font-size:10px;color:var(--og2);display:block;padding-left:24px;}
+.oc-obs{background:rgba(216,90,48,.1);color:var(--og2);font-size:11px;padding:6px 10px;border-radius:6px;margin-top:8px;font-style:italic;}
+.oc-mesa{font-size:11px;color:var(--text2);margin-top:4px;}
+
+/* ── SIDEBAR: MOVER PEDIDO ──── */
+.sb-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px;}
+.sb-desc{font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.4;}
+.sb-input{
+  width:100%;padding:14px;font-size:22px;font-weight:700;text-align:center;
+  background:var(--card2);border:2px solid var(--text3);border-radius:10px;
+  color:var(--text);outline:none;font-family:'Syne',sans-serif;
+  transition:border-color .2s;
+}
+.sb-input:focus{border-color:var(--og);}
+.sb-input::placeholder{color:var(--text3);font-weight:400;font-size:14px;}
+.sb-preview{
+  background:var(--card2);border-radius:10px;padding:14px;min-height:80px;
+  font-size:12px;color:var(--text2);margin-top:8px;
+}
+.sb-preview .sp-found{color:var(--green);font-weight:600;}
+.sb-preview .sp-not{color:var(--red);font-weight:600;}
+.sb-preview .sp-itens{margin-top:6px;font-size:11px;color:var(--text);}
+.sb-btn{
+  width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px;
+  cursor:pointer;transition:all .2s;font-family:'Syne',sans-serif;margin-top:8px;
+}
+.sb-btn:disabled{opacity:.3;cursor:not-allowed;}
+.sb-btn-1{background:var(--og);color:#fff;}
+.sb-btn-1:not(:disabled):hover{background:var(--og2);}
+.sb-btn-2{background:var(--green);color:#fff;display:none;}
+.sb-btn-2:not(:disabled):hover{background:#16a34a;}
+.sb-btn-cancel{background:transparent;color:var(--text3);border:1px solid var(--card2);font-size:12px;padding:10px;display:none;}
+.sb-btn-cancel:hover{color:var(--text);border-color:var(--text3);}
+.sb-feedback{font-size:12px;margin-top:6px;text-align:center;min-height:18px;}
+.sb-feedback.ok{color:var(--green);}
+.sb-feedback.err{color:var(--red);}
+
+/* ── AUDIO TOGGLE ───────────── */
+.sb-som{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-top:auto;cursor:pointer;padding:8px;border-radius:8px;}
+.sb-som:hover{background:var(--card2);}
+.sb-som .dot{width:8px;height:8px;border-radius:50%;}
+.sb-som .dot.on{background:var(--green);}
+.sb-som .dot.off{background:var(--red);}
+
+/* ── TOAST ──────────────────── */
+.kds-toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--green);color:#fff;padding:12px 28px;border-radius:10px;
+  font-weight:600;font-size:14px;z-index:999;opacity:0;transition:opacity .3s;
+  pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+.kds-toast.show{opacity:1;}
+
+/* ── RESPONSIVO ─────────────── */
+@media(max-width:800px){
+  .kds-body{grid-template-columns:1fr;}
+  .kds-sidebar{border-left:none;border-top:1px solid var(--card2);}
+  .orders-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="kds-header">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="kds-logo">ESQUINA BURGER <span>KDS · Cozinha</span></div>
+    <div class="kds-status"><span class="kds-dot"></span> Sincronizando</div>
+  </div>
+  <div class="kds-clock" id="kds-clock">--:--:--</div>
+</header>
+
+<!-- BODY -->
+<div class="kds-body">
+  <!-- MAIN: resumo + cards -->
+  <div class="kds-main">
+    <!-- Resumo agregado de itens -->
+    <div class="agg-title" id="agg-title">Itens pendentes na cozinha</div>
+    <div class="agg-grid" id="agg-grid">
+      <div style="color:var(--text3);font-size:13px;">Carregando...</div>
+    </div>
+
+    <!-- Cards individuais -->
+    <div class="orders-title">Pedidos em produção <span class="ot-count" id="ot-count">0</span></div>
+    <div class="orders-grid" id="orders-grid"></div>
+  </div>
+
+  <!-- SIDEBAR: mover pedido -->
+  <aside class="kds-sidebar">
+    <div>
+      <div class="sb-title">Mover pedido</div>
+      <div class="sb-desc">Digite o número do pedido para avançar para a próxima etapa. Confirmação dupla obrigatória.</div>
+    </div>
+
+    <input class="sb-input" id="sb-input" type="number" placeholder="Nº pedido" min="1" autocomplete="off">
+    <div class="sb-preview" id="sb-preview">
+      <span style="color:var(--text3);">Digite o número acima para buscar</span>
+    </div>
+
+    <button class="sb-btn sb-btn-1" id="sb-btn1" disabled onclick="primeiroPasso()">Avançar pedido</button>
+    <button class="sb-btn sb-btn-2" id="sb-btn2" onclick="confirmarAvancar()">CONFIRMAR AVANÇO</button>
+    <button class="sb-btn sb-btn-cancel" id="sb-cancel" onclick="cancelarAvancar()">Cancelar</button>
+    <div class="sb-feedback" id="sb-feedback"></div>
+
+    <div class="sb-som" onclick="toggleSom()">
+      <span class="dot on" id="som-dot"></span>
+      <span id="som-lbl">Som ativado</span>
+    </div>
+  </aside>
+</div>
+
+<!-- TOAST -->
+<div class="kds-toast" id="kds-toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// KDS — Kitchen Display System · Esquina Burger
+// Lê de localStorage (mesma chave do PDV principal)
+// ═══════════════════════════════════════════════════════════════════
+
+const STORAGE_KEY='esquina-burger_data_v5';
+const REFRESH_MS=3000; // atualiza a cada 3 segundos
+let somAtivo=true;
+let vendas=[];
+let pedidoSelecionado=null;
+let aguardandoConfirm=false;
+let ultimoBeepCount=0;
+
+// ── Helpers ──────────────────────────────────────────────────────
+function hojeKey(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function showToast(msg,ms){
+  const t=document.getElementById('kds-toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm=setTimeout(()=>t.classList.remove('show'),ms||3000);
+}
+
+// ── Relógio ─────────────────────────────────────────────────────
+function tickClock(){
+  const d=new Date();
+  document.getElementById('kds-clock').textContent=
+    d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tickClock,1000);tickClock();
+
+// ── Carregar dados ──────────────────────────────────────────────
+function carregarVendas(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw)return [];
+    const data=JSON.parse(raw);
+    return Array.isArray(data.vendas)?data.vendas:[];
+  }catch(e){return [];}
+}
+
+function pedidosCozinha(){
+  const hoje=hojeKey();
+  return vendas.filter(v=>{
+    if(!v||!v.hora)return false;
+    const d=v.hora instanceof Date?v.hora:new Date(v.hora);
+    if(isNaN(d.getTime()))return false;
+    const dk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    return dk===hoje && (v.status==='novo'||v.status==='preparo') && v.status!=='cancelado';
+  }).sort((a,b)=>new Date(a.hora)-new Date(b.hora));
+}
+
+// ── Beep de novo pedido ─────────────────────────────────────────
+function beep(){
+  if(!somAtivo)return;
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.type='sine';o.frequency.value=880;
+    g.gain.setValueAtTime(.001,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.25,ctx.currentTime+.02);
+    g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.35);
+    o.start();o.stop(ctx.currentTime+.4);
+    setTimeout(()=>{
+      try{
+        const o2=ctx.createOscillator(),g2=ctx.createGain();
+        o2.connect(g2);g2.connect(ctx.destination);
+        o2.type='sine';o2.frequency.value=1320;
+        g2.gain.setValueAtTime(.001,ctx.currentTime);
+        g2.gain.exponentialRampToValueAtTime(.25,ctx.currentTime+.02);
+        g2.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.35);
+        o2.start();o2.stop(ctx.currentTime+.4);
+      }catch(e){}
+    },180);
+  }catch(e){}
+}
+
+function toggleSom(){
+  somAtivo=!somAtivo;
+  const dot=document.getElementById('som-dot');
+  const lbl=document.getElementById('som-lbl');
+  dot.className='dot '+(somAtivo?'on':'off');
+  lbl.textContent=somAtivo?'Som ativado':'Som desativado';
+  if(somAtivo)beep();
+}
+
+// ── Render: resumo agregado ─────────────────────────────────────
+function renderAgregado(pedidos){
+  const contagem={};
+  pedidos.forEach(v=>{
+    (v.itens||[]).forEach(i=>{
+      const chave=i.nome;
+      contagem[chave]=(contagem[chave]||0)+(i.qtd||1);
+    });
+  });
+  const entries=Object.entries(contagem).sort((a,b)=>b[1]-a[1]);
+  const grid=document.getElementById('agg-grid');
+  const title=document.getElementById('agg-title');
+  const totalItens=entries.reduce((s,[,q])=>s+q,0);
+  title.textContent='Itens pendentes na cozinha · '+totalItens+' ite'+(totalItens!==1?'ns':'m');
+
+  if(!entries.length){
+    grid.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0;">Nenhum item pendente</div>';
+    return;
+  }
+  grid.innerHTML=entries.map(([nome,qt])=>
+    `<div class="agg-pill"><span class="aq">${qt}</span><span class="an">${esc(nome)}</span></div>`
+  ).join('');
+}
+
+// ── Render: cards de pedidos ────────────────────────────────────
+function renderPedidos(pedidos){
+  const grid=document.getElementById('orders-grid');
+  document.getElementById('ot-count').textContent=pedidos.length;
+
+  if(!pedidos.length){
+    grid.innerHTML='<div style="color:var(--text3);font-size:14px;padding:40px 0;text-align:center;grid-column:1/-1;">Nenhum pedido em produção</div>';
+    return;
+  }
+
+  grid.innerHTML=pedidos.map(v=>{
+    const h=(v.hora instanceof Date?v.hora:new Date(v.hora));
+    const hr=h.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const min=Math.floor((Date.now()-h.getTime())/60000);
+    let tmCls='verde',tmLbl=min+'min';
+    if(min>=60){tmCls='vermelho';tmLbl=Math.floor(min/60)+'h'+String(min%60).padStart(2,'0');}
+    else if(min>=35)tmCls='laranja';
+    else if(min>=15)tmCls='amarelo';
+
+    let urgCls='';
+    if(min>=60)urgCls='urgente';
+    else if(min>=35)urgCls='atencao';
+
+    const TIPO_LBL={delivery:'Delivery',retirada:'Retirada',mesa:'Mesa',balcao:'Balcão'};
+    const tipoLbl=TIPO_LBL[v.tipo]||v.tipo||'';
+    const tipoCls=v.tipo||'';
+    const mesaTag=v.mesa?'<div class="oc-mesa">'+esc(v.mesa)+'</div>':'';
+
+    const itensHtml=(v.itens||[]).map(i=>{
+      const adds=(i.adicionais||[]).map(a=>(a.qtd>1?a.qtd+'× ':'')+a.nome).join(', ');
+      return `<li>
+        <span><span class="oi-qtd">${i.qtd||1}×</span> ${esc(i.nome)}</span>
+        <span style="color:var(--text3);font-size:11px;">R$ ${((i.qtd||1)*(i.preco||0)).toFixed(2).replace('.',',')}</span>
+      </li>`+(adds?`<li><span class="oi-adds">+ ${esc(adds)}</span></li>`:'')+
+      (i.obs?`<li><span class="oi-adds" style="color:var(--yellow);">⚠ ${esc(i.obs)}</span></li>`:'');
+    }).join('');
+
+    const obsGeral=v.obsGeral?`<div class="oc-obs">📝 ${esc(v.obsGeral)}</div>`:'';
+
+    return `<div class="order-card ${urgCls}" data-id="${v.id}">
+      <div class="oc-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="oc-num">#${String(v.id).padStart(3,'0')}</span>
+          <span class="oc-tipo ${tipoCls}">${tipoLbl}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--text3);">${hr}</span>
+          <span class="oc-timer ${tmCls}">${tmLbl}</span>
+        </div>
+      </div>
+      <ul class="oc-itens">${itensHtml}</ul>
+      ${obsGeral}
+      ${mesaTag}
+    </div>`;
+  }).join('');
+}
+
+// ── Sidebar: buscar pedido ──────────────────────────────────────
+const sbInput=document.getElementById('sb-input');
+const sbPreview=document.getElementById('sb-preview');
+const sbBtn1=document.getElementById('sb-btn1');
+const sbBtn2=document.getElementById('sb-btn2');
+const sbCancel=document.getElementById('sb-cancel');
+const sbFeedback=document.getElementById('sb-feedback');
+
+sbInput.addEventListener('input',()=>{
+  if(aguardandoConfirm)cancelarAvancar();
+  const num=parseInt(sbInput.value);
+  if(!num||num<1){
+    sbPreview.innerHTML='<span style="color:var(--text3);">Digite o número acima para buscar</span>';
+    sbBtn1.disabled=true;
+    pedidoSelecionado=null;
+    return;
+  }
+  const pedidos=pedidosCozinha();
+  const v=pedidos.find(x=>x.id===num);
+  if(!v){
+    // Também busca em todos os pedidos de hoje (pode já ter saído da cozinha)
+    const hoje=hojeKey();
+    const vAll=vendas.find(x=>{
+      if(!x||!x.hora||x.id!==num)return false;
+      const d=x.hora instanceof Date?x.hora:new Date(x.hora);
+      const dk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      return dk===hoje;
+    });
+    if(vAll){
+      const STATUS_LBL={novo:'Novo',preparo:'Em produção',aguardando:'Aguardando entregador',pronto:'Pronto',saiu_entrega:'Saiu p/ entrega',entregue:'Entregue',cancelado:'Cancelado'};
+      sbPreview.innerHTML=`<span class="sp-not">Pedido #${String(num).padStart(3,'0')} não está na cozinha</span>
+        <div style="margin-top:4px;font-size:11px;color:var(--text3);">Status atual: ${STATUS_LBL[vAll.status]||vAll.status}</div>`;
+    }else{
+      sbPreview.innerHTML='<span class="sp-not">Pedido #'+String(num).padStart(3,'0')+' não encontrado</span>';
+    }
+    sbBtn1.disabled=true;
+    pedidoSelecionado=null;
+    return;
+  }
+  pedidoSelecionado=v;
+  const STATUS_LBL={novo:'Novo',preparo:'Em produção'};
+  const PROX={novo:'Em produção',preparo:'Próxima etapa'};
+  const proximaEtapa=proximoStatus(v);
+  const proxLbl={preparo:'Em produção',aguardando:'Aguardando entregador',pronto:'Pronto p/ retirada',entregue:'Entregue'};
+
+  sbPreview.innerHTML=`<span class="sp-found">Pedido #${String(v.id).padStart(3,'0')} encontrado</span>
+    <div style="margin-top:4px;font-size:11px;color:var(--text2);">Status: <strong>${STATUS_LBL[v.status]||v.status}</strong> → <strong style="color:var(--og);">${proxLbl[proximaEtapa]||proximaEtapa}</strong></div>
+    <div class="sp-itens">${(v.itens||[]).map(i=>(i.qtd||1)+'× '+esc(i.nome)).join(' · ')}</div>
+    ${v.mesa?'<div style="margin-top:4px;font-size:11px;color:var(--text3);">'+esc(v.mesa)+'</div>':''}`;
+  sbBtn1.disabled=false;
+});
+
+function proximoStatus(v){
+  if(v.tipo==='mesa'){
+    if(v.status==='novo')return 'preparo';
+    if(v.status==='preparo')return 'pronto';
+    return 'pronto';
+  }
+  if(v.status==='novo')return 'preparo';
+  if(v.status==='preparo'){
+    return v.tipo==='delivery'?'aguardando':'pronto';
+  }
+  return 'pronto';
+}
+
+// ── Mover pedido: dupla confirmação ─────────────────────────────
+function primeiroPasso(){
+  if(!pedidoSelecionado)return;
+  aguardandoConfirm=true;
+  sbBtn1.style.display='none';
+  sbBtn2.style.display='block';
+  sbCancel.style.display='block';
+  sbInput.disabled=true;
+  sbFeedback.textContent='Confirme para mover o pedido';
+  sbFeedback.className='sb-feedback';
+
+  // Countdown visual no botão
+  let seg=5;
+  sbBtn2.textContent='CONFIRMAR AVANÇO ('+seg+'s)';
+  sbBtn2._interval=setInterval(()=>{
+    seg--;
+    if(seg<=0){
+      clearInterval(sbBtn2._interval);
+      cancelarAvancar();
+      sbFeedback.textContent='Tempo esgotado. Tente novamente.';
+      sbFeedback.className='sb-feedback err';
+      return;
+    }
+    sbBtn2.textContent='CONFIRMAR AVANÇO ('+seg+'s)';
+  },1000);
+}
+
+function confirmarAvancar(){
+  if(!pedidoSelecionado||!aguardandoConfirm)return;
+  clearInterval(sbBtn2._interval);
+
+  // Altera status diretamente no array de vendas e salva
+  const id=pedidoSelecionado.id;
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(!raw){sbFeedback.textContent='Erro: dados não encontrados';sbFeedback.className='sb-feedback err';resetSidebar();return;}
+
+  try{
+    const data=JSON.parse(raw);
+    const arr=Array.isArray(data.vendas)?data.vendas:[];
+    const v=arr.find(x=>x.id===id);
+    if(!v){sbFeedback.textContent='Pedido não encontrado no storage';sbFeedback.className='sb-feedback err';resetSidebar();return;}
+
+    const novoStatus=proximoStatus(v);
+    const STATUS_LBL={preparo:'Em produção',aguardando:'Aguardando entregador',pronto:'Pronto',entregue:'Entregue'};
+    v.status=novoStatus;
+    v.editadoEm=new Date().toISOString();
+
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+
+    sbFeedback.textContent='Pedido #'+String(id).padStart(3,'0')+' movido para: '+STATUS_LBL[novoStatus];
+    sbFeedback.className='sb-feedback ok';
+    showToast('Pedido #'+String(id).padStart(3,'0')+' → '+STATUS_LBL[novoStatus]);
+
+    // Beep de confirmação (tom diferente)
+    if(somAtivo){
+      try{
+        const ctx=new(window.AudioContext||window.webkitAudioContext)();
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=523;
+        g.gain.setValueAtTime(.001,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(.2,ctx.currentTime+.02);
+        g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.2);
+        o.start();o.stop(ctx.currentTime+.25);
+        setTimeout(()=>{
+          const o2=ctx.createOscillator(),g2=ctx.createGain();
+          o2.connect(g2);g2.connect(ctx.destination);
+          o2.type='sine';o2.frequency.value=659;
+          g2.gain.setValueAtTime(.001,ctx.currentTime);
+          g2.gain.exponentialRampToValueAtTime(.2,ctx.currentTime+.02);
+          g2.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.25);
+          o2.start();o2.stop(ctx.currentTime+.3);
+        },120);
+        setTimeout(()=>{
+          const o3=ctx.createOscillator(),g3=ctx.createGain();
+          o3.connect(g3);g3.connect(ctx.destination);
+          o3.type='sine';o3.frequency.value=784;
+          g3.gain.setValueAtTime(.001,ctx.currentTime);
+          g3.gain.exponentialRampToValueAtTime(.2,ctx.currentTime+.02);
+          g3.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.3);
+          o3.start();o3.stop(ctx.currentTime+.35);
+        },240);
+      }catch(e){}
+    }
+
+    resetSidebar();
+    // Atualiza imediatamente
+    refresh();
+  }catch(e){
+    sbFeedback.textContent='Erro ao salvar: '+e.message;
+    sbFeedback.className='sb-feedback err';
+    resetSidebar();
+  }
+}
+
+function cancelarAvancar(){
+  clearInterval(sbBtn2._interval);
+  aguardandoConfirm=false;
+  sbBtn1.style.display='block';
+  sbBtn2.style.display='none';
+  sbCancel.style.display='none';
+  sbInput.disabled=false;
+  sbFeedback.textContent='';
+}
+
+function resetSidebar(){
+  aguardandoConfirm=false;
+  pedidoSelecionado=null;
+  sbBtn1.style.display='block';sbBtn1.disabled=true;
+  sbBtn2.style.display='none';
+  sbCancel.style.display='none';
+  sbInput.disabled=false;
+  sbInput.value='';
+  sbPreview.innerHTML='<span style="color:var(--text3);">Digite o número acima para buscar</span>';
+}
+
+// ── Loop principal ──────────────────────────────────────────────
+function refresh(){
+  vendas=carregarVendas();
+  const pedidos=pedidosCozinha();
+
+  // Detecta novos pedidos para beep
+  if(pedidos.length>ultimoBeepCount && ultimoBeepCount>0){
+    beep();
+  }
+  ultimoBeepCount=pedidos.length;
+
+  renderAgregado(pedidos);
+  renderPedidos(pedidos);
+}
+
+// Inicializa
+refresh();
+setInterval(refresh,REFRESH_MS);
+
+// Atalho Enter no input
+sbInput.addEventListener('keydown',(e)=>{
+  if(e.key==='Enter'){
+    if(aguardandoConfirm) confirmarAvancar();
+    else if(!sbBtn1.disabled) primeiroPasso();
+  }
+});
+</script>
+</body>
+</html>
