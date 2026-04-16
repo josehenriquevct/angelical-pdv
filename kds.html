@@ -76,12 +76,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .sb-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px;}
 .sb-desc{font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.4;}
 .sb-input{
-  width:100%;padding:14px;font-size:22px;font-weight:700;text-align:center;
-  background:var(--card2);border:2px solid var(--text3);border-radius:10px;
+  width:100%;padding:18px;font-size:32px;font-weight:700;text-align:center;
+  background:var(--card2);border:3px solid var(--text3);border-radius:12px;
   color:var(--text);outline:none;font-family:'Syne',sans-serif;
-  transition:border-color .2s;
+  transition:border-color .2s;caret-color:var(--og);
 }
-.sb-input:focus{border-color:var(--og);}
+.sb-input:focus{border-color:var(--og);box-shadow:0 0 0 4px rgba(216,90,48,.25);}
 .sb-input::placeholder{color:var(--text3);font-weight:400;font-size:14px;}
 .sb-preview{
   background:var(--card2);border-radius:10px;padding:14px;min-height:80px;
@@ -128,6 +128,34 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   .orders-grid{grid-template-columns:1fr;}
 }
 </style>
+<!-- FIREBASE CONFIG (mesma do PDV principal) -->
+<script>
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCD9Ow0w2e9-7t9KEIlD9sb6kZYFbNvQ84",
+  authDomain: "esquina-burger.firebaseapp.com",
+  databaseURL: "https://esquina-burger-default-rtdb.firebaseio.com",
+  projectId: "esquina-burger",
+  storageBucket: "esquina-burger.firebasestorage.app",
+  messagingSenderId: "81017075579",
+  appId: "1:81017075579:web:34836122cf33945d1f2fde"
+};
+window.FIREBASE_NAMESPACE = "pdv/unidade-1";
+</script>
+<script type="module">
+if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
+  try{
+    const {initializeApp} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const {getDatabase, ref, onValue, update} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+    const app = initializeApp(window.FIREBASE_CONFIG);
+    const db = getDatabase(app);
+    window.FB_KDS = { db, ref, onValue, update, root: window.FIREBASE_NAMESPACE, ready:true };
+    window.dispatchEvent(new CustomEvent('fb-kds-ready'));
+  }catch(e){
+    console.warn('[KDS Firebase] falha:', e);
+    window.FB_KDS = {ready:false};
+  }
+}else{ window.FB_KDS = {ready:false}; }
+</script>
 </head>
 <body>
 
@@ -162,7 +190,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="sb-desc">Digite o número do pedido para avançar para a próxima etapa. Confirmação dupla obrigatória.</div>
     </div>
 
-    <input class="sb-input" id="sb-input" type="number" placeholder="Nº pedido" min="1" autocomplete="off">
+    <input class="sb-input" id="sb-input" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="Nº pedido" min="1" autocomplete="off" autofocus>
     <div class="sb-preview" id="sb-preview">
       <span style="color:var(--text3);">Digite o número acima para buscar</span>
     </div>
@@ -189,12 +217,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 // ═══════════════════════════════════════════════════════════════════
 
 const STORAGE_KEY='esquina-burger_data_v5';
-const REFRESH_MS=3000; // atualiza a cada 3 segundos
+const REFRESH_MS=3000; // fallback refresh via localStorage
 let somAtivo=true;
 let vendas=[];
 let pedidoSelecionado=null;
 let aguardandoConfirm=false;
 let ultimoBeepCount=0;
+let fbConectado=false;
+let dadosRemoto=null; // snapshot completo do Firebase
 
 // ── Helpers ──────────────────────────────────────────────────────
 function hojeKey(){
@@ -210,6 +240,19 @@ function showToast(msg,ms){
   t._tm=setTimeout(()=>t.classList.remove('show'),ms||3000);
 }
 
+function updateSyncStatus(online){
+  const dot=document.querySelector('.kds-dot');
+  const lbl=document.querySelector('.kds-status');
+  if(!dot||!lbl)return;
+  if(online){
+    dot.style.background='var(--green)';
+    lbl.innerHTML='<span class="kds-dot" style="background:var(--green);"></span> Firebase conectado';
+  }else{
+    dot.style.background='var(--yellow)';
+    lbl.innerHTML='<span class="kds-dot" style="background:var(--yellow);"></span> Somente local';
+  }
+}
+
 // ── Relógio ─────────────────────────────────────────────────────
 function tickClock(){
   const d=new Date();
@@ -218,8 +261,17 @@ function tickClock(){
 }
 setInterval(tickClock,1000);tickClock();
 
-// ── Carregar dados ──────────────────────────────────────────────
+// ── Carregar dados (Firebase prioritário, fallback localStorage) ──
 function carregarVendas(){
+  // Se temos dados do Firebase, usar eles
+  if(dadosRemoto){
+    // vendas_map é a fonte autoritativa (mesmo que no index.html)
+    if(dadosRemoto.vendas_map && typeof dadosRemoto.vendas_map==='object'){
+      return Object.values(dadosRemoto.vendas_map);
+    }
+    if(Array.isArray(dadosRemoto.vendas)) return dadosRemoto.vendas;
+  }
+  // Fallback: localStorage (só funciona se for o mesmo PC)
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(!raw)return [];
@@ -227,6 +279,31 @@ function carregarVendas(){
     return Array.isArray(data.vendas)?data.vendas:[];
   }catch(e){return [];}
 }
+
+// ── Firebase: escuta em tempo real ──────────────────────────────
+function initFirebaseKDS(){
+  const fb=window.FB_KDS;
+  if(!fb||!fb.ready)return;
+  try{
+    const r=fb.ref(fb.db,fb.root);
+    fb.onValue(r,(snap)=>{
+      const val=snap.val();
+      if(!val)return;
+      dadosRemoto=val;
+      fbConectado=true;
+      updateSyncStatus(true);
+      refresh();
+    },(err)=>{
+      console.warn('[KDS FB] listener erro',err);
+      fbConectado=false;
+      updateSyncStatus(false);
+    });
+    updateSyncStatus(true);
+  }catch(e){console.warn('[KDS FB] init erro',e);}
+}
+// Inicializa quando Firebase estiver pronto
+if(window.FB_KDS&&window.FB_KDS.ready) initFirebaseKDS();
+else window.addEventListener('fb-kds-ready',initFirebaseKDS);
 
 function pedidosCozinha(){
   const hoje=hojeKey();
@@ -451,23 +528,48 @@ function confirmarAvancar(){
   if(!pedidoSelecionado||!aguardandoConfirm)return;
   clearInterval(sbBtn2._interval);
 
-  // Altera status diretamente no array de vendas e salva
+  // Altera status e sincroniza via Firebase + localStorage
   const id=pedidoSelecionado.id;
-  const raw=localStorage.getItem(STORAGE_KEY);
-  if(!raw){sbFeedback.textContent='Erro: dados não encontrados';sbFeedback.className='sb-feedback err';resetSidebar();return;}
+  const novoStatus=proximoStatus(pedidoSelecionado);
+  const STATUS_LBL={preparo:'Em produção',aguardando:'Aguardando entregador',pronto:'Pronto',entregue:'Entregue'};
 
   try{
-    const data=JSON.parse(raw);
-    const arr=Array.isArray(data.vendas)?data.vendas:[];
-    const v=arr.find(x=>x.id===id);
-    if(!v){sbFeedback.textContent='Pedido não encontrado no storage';sbFeedback.className='sb-feedback err';resetSidebar();return;}
+    // 1) Gravar no Firebase (prioridade — atualiza todos os dispositivos)
+    const fb=window.FB_KDS;
+    if(fb&&fb.ready&&dadosRemoto){
+      // Encontra a uid da venda no vendas_map
+      const vmap=dadosRemoto.vendas_map||{};
+      let vendaUid=null;
+      for(const [uid,v] of Object.entries(vmap)){
+        if(v&&v.id===id){vendaUid=uid;break;}
+      }
+      if(vendaUid){
+        const updates={};
+        updates['vendas_map/'+vendaUid+'/status']=novoStatus;
+        updates['vendas_map/'+vendaUid+'/editadoEm']=new Date().toISOString();
+        updates['_updatedAt']=Date.now();
+        fb.update(fb.ref(fb.db,fb.root),updates).catch(e=>console.warn('[KDS FB] update err',e));
+      }else{
+        // Fallback: tenta pelo array de vendas no Firebase
+        console.warn('[KDS] venda uid não encontrada no vendas_map, tentando localStorage');
+      }
+    }
 
-    const novoStatus=proximoStatus(v);
-    const STATUS_LBL={preparo:'Em produção',aguardando:'Aguardando entregador',pronto:'Pronto',entregue:'Entregue'};
-    v.status=novoStatus;
-    v.editadoEm=new Date().toISOString();
-
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+    // 2) Também atualiza localStorage (caso esteja no mesmo PC)
+    try{
+      const raw=localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const data=JSON.parse(raw);
+        const arr=Array.isArray(data.vendas)?data.vendas:[];
+        const vLocal=arr.find(x=>x.id===id);
+        if(vLocal){
+          vLocal.status=novoStatus;
+          vLocal.editadoEm=new Date().toISOString();
+          data._updatedAt=Date.now();
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+        }
+      }
+    }catch(e){}
 
     sbFeedback.textContent='Pedido #'+String(id).padStart(3,'0')+' movido para: '+STATUS_LBL[novoStatus];
     sbFeedback.className='sb-feedback ok';
@@ -534,7 +636,17 @@ function resetSidebar(){
   sbInput.disabled=false;
   sbInput.value='';
   sbPreview.innerHTML='<span style="color:var(--text3);">Digite o número acima para buscar</span>';
+  focarInput();
 }
+
+// ── Auto-focus: sempre manter o input pronto para digitar ───────
+function focarInput(){
+  setTimeout(()=>{ if(!sbInput.disabled) sbInput.focus(); },50);
+}
+// Refoca se clicar em qualquer lugar da página
+document.addEventListener('click',()=>{ if(!aguardandoConfirm) focarInput(); });
+// Refoca se perder foco (ex: clicou fora)
+sbInput.addEventListener('blur',()=>{ if(!aguardandoConfirm && !sbInput.disabled) focarInput(); });
 
 // ── Loop principal ──────────────────────────────────────────────
 function refresh(){
@@ -554,6 +666,8 @@ function refresh(){
 // Inicializa
 refresh();
 setInterval(refresh,REFRESH_MS);
+// Foco automático no input ao carregar
+focarInput();
 
 // Atalho Enter no input
 sbInput.addEventListener('keydown',(e)=>{
