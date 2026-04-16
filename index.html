@@ -878,6 +878,85 @@ tr:hover td{background:var(--bg);}
 .atend-input:focus{border-color:var(--og);}
 .btn-enviar-manual{position:absolute;right:24px;bottom:18px;background:var(--og);color:#fff;border:0;border-radius:6px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;}
 .btn-enviar-manual:disabled{background:var(--border);cursor:not-allowed;}
+/* ═══ MOBILE RESPONSIVO ═══ */
+.hamburger-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text);padding:4px 8px;margin-right:8px;line-height:1;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9;}
+.sidebar-overlay.open{display:block;}
+
+@media(max-width:640px){
+  :root{--sw:0px;}
+  /* Sidebar: esconder e virar overlay */
+  .sidebar{transform:translateX(-100%);transition:transform .25s ease;width:240px;}
+  .sidebar.mob-open{transform:translateX(0);}
+  .hamburger-btn{display:block;}
+  /* Main ocupa tudo */
+  .main{margin-left:0 !important;}
+  /* Topbar compacto */
+  .topbar{padding:10px 14px !important;gap:6px;}
+  .topbar-title{font-size:14px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45vw;}
+  .topbar-right{gap:6px;}
+  .topbar-right .btn-dark,.topbar-right .btn-og{padding:7px 10px;font-size:11px;}
+  .clock{font-size:10px;}
+  .user-badge{font-size:10px !important;}
+  /* Content menos padding */
+  .content{padding:12px 10px !important;}
+  /* Métricas: 2 colunas */
+  .metrics-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+  .mc{padding:10px !important;}
+  .mc-val{font-size:16px !important;}
+  .fech-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+  .cli-metrics{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+  /* Kanban: 1 coluna com scroll horizontal */
+  .kanban{grid-template-columns:1fr !important;gap:8px !important;}
+  .kb-col{min-height:auto !important;max-height:300px !important;}
+  /* Mesa grid: 2 colunas */
+  #kanban-mesas>div{grid-template-columns:repeat(2,1fr) !important;gap:10px !important;padding:6px 0 !important;}
+  /* Kanban header */
+  .kanban-hdr{flex-wrap:wrap;gap:8px;}
+  .kb-tools{flex-wrap:wrap;}
+  .kb-tool{font-size:9px;padding:4px 7px;}
+  /* PDV overlay mobile */
+  .pdv-overlay .pdv-mini{width:100vw !important;max-width:100vw !important;height:100vh !important;max-height:100vh !important;border-radius:0 !important;flex-direction:column !important;}
+  .pdv-overlay .pdv-col-right{width:auto !important;border-left:none !important;border-top:0.5px solid var(--border);}
+  .pdv-overlay .pdv-col-left{min-height:0;}
+  .pdv-overlay .mini-btn-grid{grid-template-columns:repeat(2,1fr) !important;gap:6px !important;}
+  .pdv-overlay .mini-close{top:6px;right:8px;padding:3px 9px;font-size:18px;}
+  .pdv-overlay .pdv-mini-hdr{padding:10px 14px;}
+  .pdv-overlay .pdv-mini-hdr h3{font-size:13px;}
+  .pdv-overlay .pdv-cart-ftr{max-height:none !important;}
+  /* Relatórios */
+  .rel-grid{grid-template-columns:1fr !important;}
+  /* Fechamento */
+  .fechamento-box{padding:14px 12px !important;}
+  .fechamento-box h3{font-size:15px !important;}
+  /* Modais menores */
+  .modal-box{width:95vw !important;padding:18px !important;max-height:85vh !important;}
+  /* Tabelas com scroll */
+  .estoque-card{overflow-x:auto;}
+  table{min-width:500px;}
+  /* Kanban fullscreen mobile */
+  .kanban-wrap.fullscreen{padding:10px !important;}
+  .kanban-wrap.fullscreen .kanban{grid-template-columns:1fr !important;}
+  .kanban-wrap.fullscreen .kb-col{min-height:auto !important;max-height:300px !important;}
+  /* Botão novo pedido */
+  .btn-novo-pedido{font-size:11px;padding:8px 12px;}
+  /* Esconder texto dos botões menos importantes */
+  .topbar-right .btn-dark{font-size:10px;padding:6px 8px;}
+  /* Alert banner */
+  .alert-banner{flex-direction:column;gap:6px;}
+  .allday-items{flex-direction:column;}
+  /* Op layout */
+  .op-layout{display:block;}
+}
+
+@media(max-width:380px){
+  /* Telas muito pequenas */
+  .metrics-grid{grid-template-columns:1fr !important;}
+  .fech-grid{grid-template-columns:1fr !important;}
+  #kanban-mesas>div{grid-template-columns:repeat(2,1fr) !important;}
+  .topbar-right .btn-dark{display:none;}
+  .pdv-overlay .mini-btn-grid{grid-template-columns:1fr !important;}
+}
 </style>
 <!-- ============================================================
      FIREBASE REALTIME SYNC
@@ -959,9 +1038,12 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && window.FIREBASE_CO
     <p id="unid-nome">Vicentinópolis</p>
   </div>
 </aside>
+<!-- OVERLAY SIDEBAR MOBILE -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
     <div class="topbar-title" id="pg-title">Pedidos / PDV <span id="caixa-status-top"></span> <span id="sync-badge" class="sync-badge offline"><span class="dot"></span>● local</span></div>
     <div class="topbar-right">
       <span class="user-badge" id="user-badge" style="display:none;"><span class="ub-dot"></span><span id="ub-nome">—</span><button class="ub-logout" onclick="logoutUser()" title="Sair do sistema">×</button></span>
@@ -2524,7 +2606,23 @@ const estoque=[
   {id:12,nome:'Tomate',cat:'Vegetais',qtd:5,min:3,unid:'kg'},
 ];
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
+/* ═══ SIDEBAR MOBILE TOGGLE ═══ */
+function toggleSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('sidebar-overlay');
+  if(!sb)return;
+  sb.classList.toggle('mob-open');
+  if(ov) ov.classList.toggle('open',sb.classList.contains('mob-open'));
+}
+// Fechar sidebar ao navegar no mobile
+const _origGo=typeof go==='function'?go:null;
+
 function go(view,el){
+  // Fecha sidebar mobile ao navegar
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('sidebar-overlay');
+  if(sb&&sb.classList.contains('mob-open')){sb.classList.remove('mob-open');if(ov)ov.classList.remove('open');}
+
   // Admin (josé) pode navegar sem precisar abrir caixa — só gerencia.
   // Funcionárias continuam obrigadas a abrir caixa.
   const ehAdmin=usuarioLogado && usuarioLogado.admin;
