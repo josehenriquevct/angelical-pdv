@@ -65,11 +65,32 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .oc-tipo.retirada{background:#7c3aed;}
 .oc-tipo.mesa{background:#0d9488;}
 .oc-itens{list-style:none;margin:8px 0;padding:0;}
-.oc-itens li{font-size:13px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;}
+.oc-itens li{font-size:14px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:flex-start;}
 .oc-itens li:last-child{border-bottom:none;}
-.oc-itens .oi-qtd{color:var(--og);font-weight:700;margin-right:6px;}
-.oc-itens .oi-adds{font-size:10px;color:var(--og2);display:block;padding-left:24px;}
-.oc-obs{background:rgba(216,90,48,.1);color:var(--og2);font-size:11px;padding:6px 10px;border-radius:6px;margin-top:8px;font-style:italic;}
+.oc-itens .oi-qtd{color:var(--og);font-weight:800;margin-right:6px;font-size:16px;}
+.oc-itens .oi-nome{font-weight:600;}
+/* EXTRAS — bem visível, verde */
+.oc-itens .oi-adds{
+  display:block;padding:4px 10px 4px 24px;font-size:13px;font-weight:700;
+  color:#4ade80;background:rgba(74,222,128,.1);border-left:3px solid #4ade80;
+  border-radius:0 6px 6px 0;margin:2px 0;
+}
+/* OBSERVAÇÕES / RETIRADAS — destaque vermelho/amarelo grande */
+.oc-itens .oi-obs-item{
+  display:block;padding:5px 10px 5px 24px;font-size:13px;font-weight:700;
+  color:#fbbf24;background:rgba(251,191,36,.12);border-left:3px solid #fbbf24;
+  border-radius:0 6px 6px 0;margin:2px 0;
+}
+.oc-itens .oi-obs-item.retirada{
+  color:#f87171;background:rgba(248,113,113,.12);border-left-color:#f87171;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+/* OBS GERAL do pedido */
+.oc-obs{
+  background:rgba(251,191,36,.15);color:#fbbf24;font-size:14px;font-weight:700;
+  padding:10px 14px;border-radius:8px;margin-top:10px;
+  border:2px solid rgba(251,191,36,.3);
+}
 .oc-mesa{font-size:11px;color:var(--text2);margin-top:4px;}
 
 /* ── SIDEBAR: MOVER PEDIDO ──── */
@@ -354,13 +375,27 @@ function toggleSom(){
 // ── Render: resumo agregado ─────────────────────────────────────
 function renderAgregado(pedidos){
   const contagem={};
+  const contagemExtras={};
+  const alertas=[]; // obs e retiradas pendentes
   pedidos.forEach(v=>{
     (v.itens||[]).forEach(i=>{
-      const chave=i.nome;
-      contagem[chave]=(contagem[chave]||0)+(i.qtd||1);
+      contagem[i.nome]=(contagem[i.nome]||0)+(i.qtd||1);
+      // Conta extras separado
+      (i.adicionais||[]).forEach(a=>{
+        const k='+ '+a.nome;
+        contagemExtras[k]=(contagemExtras[k]||0)+((a.qtd||1)*(i.qtd||1));
+      });
+      // Coleta observações/retiradas
+      if(i.obs&&i.obs.trim()){
+        alertas.push({pedido:v.id, item:i.nome, obs:i.obs.trim()});
+      }
     });
+    if(v.obsGeral&&v.obsGeral.trim()){
+      alertas.push({pedido:v.id, item:'PEDIDO', obs:v.obsGeral.trim()});
+    }
   });
   const entries=Object.entries(contagem).sort((a,b)=>b[1]-a[1]);
+  const extrasEntries=Object.entries(contagemExtras).sort((a,b)=>b[1]-a[1]);
   const grid=document.getElementById('agg-grid');
   const title=document.getElementById('agg-title');
   const totalItens=entries.reduce((s,[,q])=>s+q,0);
@@ -370,9 +405,32 @@ function renderAgregado(pedidos){
     grid.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0;">Nenhum item pendente</div>';
     return;
   }
-  grid.innerHTML=entries.map(([nome,qt])=>
+  // Itens principais
+  let html=entries.map(([nome,qt])=>
     `<div class="agg-pill"><span class="aq">${qt}</span><span class="an">${esc(nome)}</span></div>`
   ).join('');
+  // Extras agregados (verde)
+  if(extrasEntries.length){
+    html+=extrasEntries.map(([nome,qt])=>
+      `<div class="agg-pill" style="border-color:#4ade80;background:rgba(74,222,128,.08);"><span class="aq" style="background:#16a34a;">${qt}</span><span class="an" style="color:#4ade80;">${esc(nome)}</span></div>`
+    ).join('');
+  }
+  // Alertas de observações/retiradas
+  if(alertas.length){
+    html+='<div style="width:100%;margin-top:10px;display:flex;flex-direction:column;gap:4px;">';
+    alertas.forEach(a=>{
+      const isRetirada=/\b(sem|tirar|tira|retirar|retira|s\/|não|nao|remove)\b/i.test(a.obs);
+      const bg=isRetirada?'rgba(248,113,113,.15)':'rgba(251,191,36,.12)';
+      const cor=isRetirada?'#f87171':'#fbbf24';
+      const brd=isRetirada?'#f87171':'#fbbf24';
+      const icon=isRetirada?'🚫':'⚠️';
+      html+=`<div style="background:${bg};border-left:4px solid ${brd};padding:6px 12px;border-radius:0 8px 8px 0;font-size:13px;font-weight:700;color:${cor};">
+        ${icon} #${String(a.pedido).padStart(3,'0')} · ${esc(a.item)}: ${esc(a.obs)}
+      </div>`;
+    });
+    html+='</div>';
+  }
+  grid.innerHTML=html;
 }
 
 // ── Render: cards de pedidos ────────────────────────────────────
@@ -404,12 +462,25 @@ function renderPedidos(pedidos){
     const mesaTag=v.mesa?'<div class="oc-mesa">'+esc(v.mesa)+'</div>':'';
 
     const itensHtml=(v.itens||[]).map(i=>{
-      const adds=(i.adicionais||[]).map(a=>(a.qtd>1?a.qtd+'× ':'')+a.nome).join(', ');
+      // Extras/adicionais — cada um em linha separada, bem visível
+      let addsHtml='';
+      if(i.adicionais&&i.adicionais.length){
+        addsHtml=i.adicionais.map(a=>
+          `<li><span class="oi-adds">+ ${a.qtd>1?a.qtd+'× ':''}${esc(a.nome)}</span></li>`
+        ).join('');
+      }
+      // Observação do item — detecta retiradas (sem, tirar, retirar, s/, não)
+      let obsHtml='';
+      if(i.obs&&i.obs.trim()){
+        const obsText=i.obs.trim();
+        const isRetirada=/\b(sem|tirar|tira|retirar|retira|s\/|não|nao|remove)\b/i.test(obsText);
+        const cls=isRetirada?'oi-obs-item retirada':'oi-obs-item';
+        const icon=isRetirada?'🚫':'⚠️';
+        obsHtml=`<li><span class="${cls}">${icon} ${esc(obsText)}</span></li>`;
+      }
       return `<li>
-        <span><span class="oi-qtd">${i.qtd||1}×</span> ${esc(i.nome)}</span>
-        <span style="color:var(--text3);font-size:11px;">R$ ${((i.qtd||1)*(i.preco||0)).toFixed(2).replace('.',',')}</span>
-      </li>`+(adds?`<li><span class="oi-adds">+ ${esc(adds)}</span></li>`:'')+
-      (i.obs?`<li><span class="oi-adds" style="color:var(--yellow);">⚠ ${esc(i.obs)}</span></li>`:'');
+        <span><span class="oi-qtd">${i.qtd||1}×</span> <span class="oi-nome">${esc(i.nome)}</span></span>
+      </li>${addsHtml}${obsHtml}`;
     }).join('');
 
     const obsGeral=v.obsGeral?`<div class="oc-obs">📝 ${esc(v.obsGeral)}</div>`:'';
