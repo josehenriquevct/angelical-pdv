@@ -2235,7 +2235,7 @@ let comandaFecharId=null, pgtoFecharComanda='pix';
 // Para cada novo cliente, basta alterar este bloco.
 const RESTAURANTE = {
   nome: 'Esquina Burger',
-  nomeUpper: RESTAURANTE.nomeUpper,
+  nomeUpper: 'ESQUINA BURGER',
   slug: 'esquina-burger',
   cidade: 'Vicentinópolis',
   hashtag: '#EsquinaBurger',
@@ -6081,11 +6081,10 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Backspace'){loginBack();e.preventDefault();}
   else if(e.key==='Escape'){loginClear();e.preventDefault();}
 });
-// Restaurar sessão anterior (se houver)
-try{
-  const saved=localStorage.getItem('eb_usuario_logado');
-  if(saved){usuarioLogado=JSON.parse(saved);}
-}catch(e){}
+// ── SEGURANÇA: SEMPRE exige login ao abrir/recarregar ──
+// NÃO restaura sessão do localStorage — obriga PIN toda vez
+usuarioLogado=null;
+try{localStorage.removeItem('eb_usuario_logado');}catch(e){}
 window.loginKey=loginKey;window.loginBack=loginBack;window.loginClear=loginClear;window.logoutUser=logoutUser;window.mostrarLogin=mostrarLogin;
 
 loadData();
